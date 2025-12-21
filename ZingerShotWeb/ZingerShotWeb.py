@@ -36,7 +36,7 @@ class App:
     def __init__(self):
         pyxel.init(WIDTH,HEIGHT, title='Zinger Shot (Web)')
         pyxel.load('ZingerShot.pyxres')
-        pyxel.integer_scale(True)
+        #pyxel.integer_scale(True)
         pyxel.mouse(True)
         self.iras = iras_web.Irasutoya()
         self.status = POPUP_TOTAL
