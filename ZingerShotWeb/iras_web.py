@@ -1,6 +1,6 @@
 #
 # 「いらすとや」ランダム画像取得（Web）
-# iras_web.py 2025/12/21
+# iras_web.py 2026/7/11
 #
 import pyxel
 import pxt
@@ -34,11 +34,13 @@ class Irasutoya:
         self.image_url = ''
         self.title_text = ''
 
-    async def fetch_text(self, url, cors=1):  # テキスト取得（エラー:511）
+    async def fetch_text(self, url, cors=3):  # テキスト取得（エラー:511）
         if cors==1:
             url = 'https://api.codetabs.com/v1/proxy/?quest='+url
         elif cors==2:
             url = 'https://api.allorigins.win/raw?url='+url
+        elif cors==3:
+            url = 'https://proxy.cors.sh/'+url
         try:
             response = await pyfetch(url)
             self.fetch_txt = await response.text()
@@ -48,11 +50,13 @@ class Irasutoya:
         else:
             self.fetch_status = SUCCEEDING
 
-    async def fetch_image(self, url, cors=1):  # 画像取得（エラー:521,523）
+    async def fetch_image(self, url, cors=3):  # 画像取得（エラー:521,523）
         if cors==1:
             url = 'https://api.codetabs.com/v1/proxy/?quest='+url
         elif cors==2:
             url = 'https://api.allorigins.win/raw?url='+url
+        elif cors==3:
+            url = 'https://proxy.cors.sh/'+url
         try:
             response = await pyfetch(url)
         except Exception as e:
@@ -90,96 +94,97 @@ class Irasutoya:
         return closest_color
 
     def get_total_posts(self):  # イラスト総数取得
-            if self.fetch_status==READY:
-                self.fetch_status = FETCHING
-                asyncio.ensure_future(self.fetch_text('https://www.irasutoya.com/feeds/posts/summary?alt=json'))
-            elif self.fetch_status==SUCCEEDING:
-                try:
-                    data = json.loads(self.fetch_txt)
-                    self.total_posts = int(data['feed']['openSearch$totalResults']['$t'])
-                except json.JSONDecodeError as e:
-                    self.error_txt = str(e)
-                    self.fetch_status = FAILURE
-                else:
-                    self.fetch_status = SUCCESS
-            elif self.fetch_status==FAILING:
+        if self.fetch_status==READY:
+            self.fetch_status = FETCHING
+            asyncio.ensure_future(self.fetch_text('https://www.irasutoya.com/feeds/posts/summary?alt=json'))
+        elif self.fetch_status==SUCCEEDING:
+            try:
+                data = json.loads(self.fetch_txt)
+                self.total_posts = int(data['feed']['openSearch$totalResults']['$t'])
+            except json.JSONDecodeError as e:
+                self.error_txt = str(e)
                 self.fetch_status = FAILURE
+            else:
+                self.fetch_status = SUCCESS
+        elif self.fetch_status==FAILING:
+            self.fetch_status = FAILURE
 
     def get_random_post_url(self):  # ランダムURL取得
-            if self.fetch_status==READY:
-                self.fetch_status = FETCHING
-                self.post_num = pyxel.rndi(1,self.total_posts-1)
-                asyncio.ensure_future(self.fetch_text(f'https://www.irasutoya.com/feeds/posts/summary?start-index={self.post_num}%26max-results=1%26alt=json'))
-            elif self.fetch_status==SUCCEEDING:
-                try:
-                    data = json.loads(self.fetch_txt)
-                    self.random_post_url = data['feed']['entry'][0]['link'][-1]['href']
-                except json.JSONDecodeError as e:
-                    self.error_txt = str(e)
-                    self.fetch_status = FAILURE
-                else:
-                    self.fetch_status = SUCCESS
-            elif self.fetch_status==FAILING:
+        if self.fetch_status==READY:
+            self.fetch_status = FETCHING
+            self.post_num = pyxel.rndi(1,self.total_posts-1)
+            #asyncio.ensure_future(self.fetch_text(f'https://www.irasutoya.com/feeds/posts/summary?start-index={self.post_num}%26max-results=1%26alt=json'))
+            asyncio.ensure_future(self.fetch_text(f'https://www.irasutoya.com/feeds/posts/summary?start-index={self.post_num}&max-results=1&alt=json'))
+        elif self.fetch_status==SUCCEEDING:
+            try:
+                data = json.loads(self.fetch_txt)
+                self.random_post_url = data['feed']['entry'][0]['link'][-1]['href']
+            except json.JSONDecodeError as e:
+                self.error_txt = str(e)
                 self.fetch_status = FAILURE
+            else:
+                self.fetch_status = SUCCESS
+        elif self.fetch_status==FAILING:
+            self.fetch_status = FAILURE
 
     def get_image_url(self):  # タイトル・イラストURL取得（エラー:321,322,331,332）
-            if self.fetch_status==READY:
-                self.fetch_status = FETCHING
-                asyncio.ensure_future(self.fetch_text(self.random_post_url))
-            elif self.fetch_status==SUCCEEDING:
-                soup = BeautifulSoup(self.fetch_txt, 'html.parser')
-                image_div = soup.find('div', class_='separator')  # 画像URLを取得
-                if image_div:
-                    image_tag = image_div.find('a')
-                    if image_tag and 'href' in image_tag.attrs:
-                        self.image_url = image_tag['href']
-                    else:
-                        self.error_txt = 'Error 321: '
-                        self.fetch_status = FAILURE
-                        return
+        if self.fetch_status==READY:
+            self.fetch_status = FETCHING
+            asyncio.ensure_future(self.fetch_text(self.random_post_url))
+        elif self.fetch_status==SUCCEEDING:
+            soup = BeautifulSoup(self.fetch_txt, 'html.parser')
+            image_div = soup.find('div', class_='separator')  # 画像URLを取得
+            if image_div:
+                image_tag = image_div.find('a')
+                if image_tag and 'href' in image_tag.attrs:
+                    self.image_url = image_tag['href']
                 else:
-                    self.error_txt = 'Error 322: '  # 画像URL取得不可
+                    self.error_txt = 'Error 321: '
                     self.fetch_status = FAILURE
                     return
-                title_div = soup.find('div', class_='title')  # タイトル取得
-                if title_div:
-                    self.title_text = title_div.text.strip()
-                    if self.title_text=='':
-                        self.error_txt = 'Error 331: '
-                        self.fetch_status = FAILURE
-                        return
-                else:
-                    self.error_txt = 'Error 332: '
-                    self.fetch_status = FAILURE
-                    return
-                self.fetch_status = SUCCESS
-            elif self.fetch_status==FAILING:
+            else:
+                self.error_txt = 'Error 322: '  # 画像URL取得不可
                 self.fetch_status = FAILURE
+                return
+            title_div = soup.find('div', class_='title')  # タイトル取得
+            if title_div:
+                self.title_text = title_div.text.strip()
+                if self.title_text=='':
+                    self.error_txt = 'Error 331: '
+                    self.fetch_status = FAILURE
+                    return
+            else:
+                self.error_txt = 'Error 332: '
+                self.fetch_status = FAILURE
+                return
+            self.fetch_status = SUCCESS
+        elif self.fetch_status==FAILING:
+            self.fetch_status = FAILURE
 
     def get_image(self):  # イラスト取得
-            if self.fetch_status==READY:
-                self.fetch_status = FETCHING
-                asyncio.ensure_future(self.fetch_image(self.image_url))
-            elif self.fetch_status==SUCCEEDING:
-                img = self.fetch_img.convert('RGBA')  # PNGの場合、アルファチャンネル（透明度）を保持
-                img.thumbnail((IMG_SIZE, IMG_SIZE), Image.LANCZOS)  # アスペクト比を維持してリサイズ
-                self.width,self.height = img.size
-                img_array = np.array(img)
-                sx = (max(self.width,self.height)-self.width)//2
-                sy = (max(self.width,self.height)-self.height)//2
-                for y in range(256):
-                    for x in range(256):
-                        pyxel.images[IMG_BANK].pset(x,y,TRANSPARENT)
-                for y in range(self.height):
-                    for x in range(self.width):
-                        r,g,b,a = img_array[y,x]
-                        if a<16: # アルファ値：透明
-                            pyxel.images[IMG_BANK].pset(sx+x,sy+y,TRANSPARENT)
-                        else:
-                            pyxel.images[IMG_BANK].pset(sx+x,sy+y,self.closest_pyxel_color(r,g,b,a))
-                self.fetch_status = SUCCESS
-            elif self.fetch_status==FAILING:
-                self.fetch_status = FAILURE
+        if self.fetch_status==READY:
+            self.fetch_status = FETCHING
+            asyncio.ensure_future(self.fetch_image(self.image_url))
+        elif self.fetch_status==SUCCEEDING:
+            img = self.fetch_img.convert('RGBA')  # PNGの場合、アルファチャンネル（透明度）を保持
+            img.thumbnail((IMG_SIZE, IMG_SIZE), Image.LANCZOS)  # アスペクト比を維持してリサイズ
+            self.width,self.height = img.size
+            img_array = np.array(img)
+            sx = (max(self.width,self.height)-self.width)//2
+            sy = (max(self.width,self.height)-self.height)//2
+            for y in range(256):
+                for x in range(256):
+                    pyxel.images[IMG_BANK].pset(x,y,TRANSPARENT)
+            for y in range(self.height):
+                for x in range(self.width):
+                    r,g,b,a = img_array[y,x]
+                    if a<16: # アルファ値：透明
+                        pyxel.images[IMG_BANK].pset(sx+x,sy+y,TRANSPARENT)
+                    else:
+                        pyxel.images[IMG_BANK].pset(sx+x,sy+y,self.closest_pyxel_color(r,g,b,a))
+            self.fetch_status = SUCCESS
+        elif self.fetch_status==FAILING:
+            self.fetch_status = FAILURE
 
     def remove_lastparen_block(self, txt):  # 文末の（...）を削除
         if not txt.endswith('）'):
