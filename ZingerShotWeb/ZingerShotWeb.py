@@ -1,6 +1,6 @@
 #
 # Zinger Shot (Web)
-# ZingerShotWeb.py 2025/12/12
+# ZingerShotWeb.py 2026/11/8
 #
 import pyxel
 import pxt
@@ -157,6 +157,6 @@ class App:
         #pyxel.text(0,12, 'RndURL:'+self.iras.random_post_url, 3)
         #pyxel.text(0,18, 'ImgURL:'+self.iras.image_url, 3)
         #pxt.textbox(0,24, 'Title:'+self.iras.title_text, 3)
-        #pyxel.text(0,36, f"{self.iras.text}", 3)
+        #pyxel.text(0,36, f"{self.iras.fetch_txt}", 3)
 
 App()

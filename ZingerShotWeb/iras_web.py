@@ -1,6 +1,6 @@
 #
 # 「いらすとや」ランダム画像取得（Web）
-# iras_web.py 2026/7/11
+# iras_web.py 2026/11/8
 #
 import pyxel
 import pxt
@@ -34,13 +34,15 @@ class Irasutoya:
         self.image_url = ''
         self.title_text = ''
 
-    async def fetch_text(self, url, cors=3):  # テキスト取得（エラー:511）
+    async def fetch_text(self, url, cors=4):  # テキスト取得（エラー:511）
         if cors==1:
             url = 'https://api.codetabs.com/v1/proxy/?quest='+url
         elif cors==2:
             url = 'https://api.allorigins.win/raw?url='+url
         elif cors==3:
             url = 'https://proxy.cors.sh/'+url
+        elif cors==4:
+            url = 'https://cors-proxy.aged99oow.workers.dev/?url='+url
         try:
             response = await pyfetch(url)
             self.fetch_txt = await response.text()
@@ -50,13 +52,15 @@ class Irasutoya:
         else:
             self.fetch_status = SUCCEEDING
 
-    async def fetch_image(self, url, cors=3):  # 画像取得（エラー:521,523）
+    async def fetch_image(self, url, cors=4):  # 画像取得（エラー:521,523）
         if cors==1:
             url = 'https://api.codetabs.com/v1/proxy/?quest='+url
         elif cors==2:
             url = 'https://api.allorigins.win/raw?url='+url
         elif cors==3:
             url = 'https://proxy.cors.sh/'+url
+        elif cors==4:
+            url = 'https://cors-proxy.aged99oow.workers.dev/?url='+url
         try:
             response = await pyfetch(url)
         except Exception as e:
@@ -113,8 +117,8 @@ class Irasutoya:
         if self.fetch_status==READY:
             self.fetch_status = FETCHING
             self.post_num = pyxel.rndi(1,self.total_posts-1)
-            #asyncio.ensure_future(self.fetch_text(f'https://www.irasutoya.com/feeds/posts/summary?start-index={self.post_num}%26max-results=1%26alt=json'))
-            asyncio.ensure_future(self.fetch_text(f'https://www.irasutoya.com/feeds/posts/summary?start-index={self.post_num}&max-results=1&alt=json'))
+            asyncio.ensure_future(self.fetch_text(f'https://www.irasutoya.com/feeds/posts/summary?start-index={self.post_num}%26max-results=1%26alt=json'))
+            #asyncio.ensure_future(self.fetch_text(f'https://www.irasutoya.com/feeds/posts/summary?start-index={self.post_num}&max-results=1&alt=json'))
         elif self.fetch_status==SUCCEEDING:
             try:
                 data = json.loads(self.fetch_txt)
